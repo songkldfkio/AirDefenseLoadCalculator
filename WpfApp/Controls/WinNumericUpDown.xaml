@@ -1,0 +1,53 @@
+<UserControl x:Class="AirDefenseLoad.Controls.WinNumericUpDown"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root"
+             Width="49" Height="21"
+             SnapsToDevicePixels="True"
+             UseLayoutRounding="True">
+
+    <!--
+        复刻 WinForms NumericUpDown：白底、1px 灰边、右侧 17px 上下箭头条。
+        尺寸 49×21 与原程序的 ankp / ankq 完全一致。
+    -->
+    <Grid Width="49" Height="21">
+        <Border Background="White" BorderBrush="{StaticResource SpinBorderBrush}"
+                BorderThickness="1" CornerRadius="1"/>
+
+        <TextBox x:Name="Editor"
+                 Margin="3,1,17,1"
+                 Background="Transparent" BorderThickness="0"
+                 FontFamily="宋体" FontSize="12" Foreground="Black"
+                 VerticalContentAlignment="Center"
+                 Padding="0"
+                 TextAlignment="Left"
+                 FocusVisualStyle="{x:Null}"
+                 LostFocus="Editor_LostFocus"
+                 KeyDown="Editor_KeyDown"
+                 PreviewMouseWheel="Editor_MouseWheel"/>
+
+        <Border HorizontalAlignment="Right" Width="17" Margin="0,1,1,1"
+                Background="{StaticResource SpinArrowFaceBrush}"
+                BorderBrush="{StaticResource SpinBorderBrush}"
+                BorderThickness="1,0,0,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" BorderBrush="{StaticResource SpinBorderBrush}" BorderThickness="0,0,0,1">
+                    <RepeatButton Style="{StaticResource SpinArrowButton}" Click="Up_Click">
+                        <Path Data="M 0 4 L 7 4 L 3.5 0 Z" Fill="{StaticResource ScrollArrowBrush}"/>
+                    </RepeatButton>
+                </Border>
+
+                <Border Grid.Row="1">
+                    <RepeatButton Style="{StaticResource SpinArrowButton}" Click="Down_Click">
+                        <Path Data="M 0 0 L 7 0 L 3.5 4 Z" Fill="{StaticResource ScrollArrowBrush}"/>
+                    </RepeatButton>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,38 @@
+# ---------- 构建产物 ----------
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# ---------- Visual Studio / Rider ----------
+.vs/
+.vscode/
+.idea/
+*.cache
+*.log
+
+# ---------- NuGet 还原目录（由 packages.config 还原，不入库） ----------
+packages/
+*.nupkg
+*.nupkg.metadata
+
+# ---------- 本地工具与测试产物 ----------
+Temp/
+.workbuddy/
+
+# ---------- 发布产物（由源码构建，不入库） ----------
+WpfApp/dist/
+
+# ---------- 系统文件 ----------
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# ---------- 异常快照 ----------
+*.tmp
+*.bak
+*.orig

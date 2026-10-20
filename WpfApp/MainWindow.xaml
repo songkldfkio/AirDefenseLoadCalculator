@@ -1,0 +1,227 @@
+<Window x:Class="AirDefenseLoad.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:AirDefenseLoad.Controls"
+        Title="防空地下室战时负荷计算V2.0"
+        WindowStyle="SingleBorderWindow"
+        ResizeMode="CanResize"
+        SizeToContent="Manual"
+        Width="428" Height="522" MinWidth="0" MinHeight="0"
+        WindowStartupLocation="CenterScreen"
+        Background="White"
+        FontFamily="宋体"
+        FontSize="12"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType">
+
+    <!--
+        原 WinForms 版是固定尺寸（412×483 收起 / 1118×483 展开 / 706×681 导出视图）。
+        WPF 版放开拉伸：默认客户区仍是上面三个尺寸（坐标 1:1 沿用 Form1.Designer.cs），
+        拖动窗口时只有表格区域跟着变大，控件位置和列宽保持不变。
+    -->
+    <Grid x:Name="RootGrid" Background="{StaticResource FormBackBrush}" ClipToBounds="True">
+
+        <!-- ==================== 计算界面 ==================== -->
+        <Grid x:Name="Panel1" Background="White" SizeChanged="Panel1_SizeChanged">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="LeftColumn" Width="*" MinWidth="412"/>
+                <ColumnDefinition x:Name="RightColumn" Width="0"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 左：参数区 + dataGridView1 输入表 -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="85"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- 控件坐标与原 Designer 完全一致（相对 Panel1 左上角） -->
+                <Canvas Width="412" Height="85" HorizontalAlignment="Left" VerticalAlignment="Top">
+
+                    <!-- groupBox1 -->
+                    <Rectangle Canvas.Left="2" Canvas.Top="2" Width="406" Height="79"
+                               RadiusX="3" RadiusY="3"
+                               Fill="White" Stroke="{StaticResource GroupBoxBorderBrush}" StrokeThickness="1"/>
+
+                    <TextBlock Canvas.Left="4" Canvas.Top="17" Text="K∑p=" Foreground="Black"/>
+                    <controls:WinNumericUpDown x:Name="KpBox"
+                                               Canvas.Left="42" Canvas.Top="17" Width="49" Height="21"
+                                               Minimum="0.01" Maximum="1" Increment="0.01" Decimals="2"
+                                               Value="{Binding Kp, Mode=TwoWay}"/>
+
+                    <TextBlock Canvas.Left="4" Canvas.Top="50" Text="K∑q=" Foreground="Black"/>
+                    <controls:WinNumericUpDown x:Name="KqBox"
+                                               Canvas.Left="42" Canvas.Top="50" Width="49" Height="21"
+                                               Minimum="0.01" Maximum="1" Increment="0.01" Decimals="2"
+                                               Value="{Binding Kq, Mode=TwoWay}"/>
+
+                    <Button Canvas.Left="102" Canvas.Top="13" Width="73" Height="28"
+                            Style="{StaticResource WinButton}" Content="增加单元" Click="AddUnit_Click"/>
+                    <Button Canvas.Left="102" Canvas.Top="47" Width="73" Height="28"
+                            Style="{StaticResource WinButton}" Content="删除单元" Click="RemoveUnit_Click"/>
+                    <Button Canvas.Left="181" Canvas.Top="13" Width="73" Height="28"
+                            Style="{StaticResource WinButton}" Content="序号重置" Click="Renumber_Click"/>
+                    <Button Canvas.Left="181" Canvas.Top="47" Width="73" Height="28"
+                            Style="{StaticResource ResetButton}" Content="全部重置" Click="ResetAll_Click"/>
+
+                    <Button x:Name="ExpandButton"
+                            Canvas.Left="325" Canvas.Top="13" Width="73" Height="28"
+                            Style="{StaticResource WinButton}" Foreground="Gray"
+                            Content="&gt;&gt;" Click="Expand_Click"/>
+                    <Button Canvas.Left="325" Canvas.Top="47" Width="73" Height="28"
+                            Style="{StaticResource WinButton}" Content="导出" Click="Export_Click"/>
+                </Canvas>
+
+                <!-- dataGridView1：输入表 -->
+                <Border Grid.Row="1" Margin="2,0,4,3"
+                        Background="{StaticResource GridGrayBgBrush}"
+                        BorderBrush="{StaticResource GridFrameBrush}" BorderThickness="1">
+                    <DataGrid x:Name="InputGrid" Style="{StaticResource ClassicGrid}"
+                              Background="{StaticResource GridGrayBgBrush}"
+                              AlternationCount="2"
+                              ItemsSource="{Binding Units}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="" Width="80"
+                                                CellStyle="{StaticResource UnitNameCell}"
+                                                Binding="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"/>
+                            <DataGridTextColumn Header="一级kW" Width="81"
+                                                Binding="{Binding P1, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"/>
+                            <DataGridTextColumn Header="二级kW" Width="80"
+                                                Binding="{Binding P2, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"/>
+                            <DataGridTextColumn Header="k" Width="81"
+                                                Binding="{Binding K, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"/>
+                            <DataGridTextColumn Header="cos" Width="80"
+                                                Binding="{Binding Cos, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+            </Grid>
+
+            <!-- 右：dataGridView2 明细表 + dataGridView3 合计表 -->
+            <Grid x:Name="RightPanel" Grid.Column="1" ClipToBounds="True" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="164"/>
+                </Grid.RowDefinitions>
+
+                <Border Margin="0,2,2,2"
+                        Background="{StaticResource GridCyanBgBrush}"
+                        BorderBrush="{StaticResource GridFrameBrush}" BorderThickness="1">
+                    <DataGrid x:Name="DetailGrid" Style="{StaticResource ClassicGrid}"
+                              Background="{StaticResource GridCyanBgBrush}"
+                              AlternationCount="2"
+                              ItemsSource="{Binding DetailRows}"
+                              IsReadOnly="True"
+                              SelectionMode="Extended"
+                              ClipboardCopyMode="IncludeHeader"
+                              HorizontalScrollBarVisibility="Auto"
+                              PreviewKeyDown="ResultGrid_PreviewKeyDown">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="" Binding="{Binding Unit}" Width="100"
+                                                CellStyle="{StaticResource UnitNameCell}"/>
+                            <DataGridTextColumn Header="负荷等级" Binding="{Binding Level}" Width="100"
+                                                CellStyle="{StaticResource ClassicCell}"/>
+                            <DataGridTextColumn Header="安装容量(kW)" Binding="{Binding Pn}" Width="100"
+                                                CellStyle="{StaticResource ClassicCell}"/>
+                            <DataGridTextColumn Header="P(kW)" Binding="{Binding Pc}" Width="100"
+                                                CellStyle="{StaticResource ClassicCell}"/>
+                            <DataGridTextColumn Header="Q(kVar)" Binding="{Binding Qc}" Width="100"
+                                                CellStyle="{StaticResource ClassicCell}"/>
+                            <DataGridTextColumn Header="S(kVA)" Binding="{Binding S}" Width="100"
+                                                CellStyle="{StaticResource ClassicCell}"/>
+                            <DataGridTextColumn Header="备注" Binding="{Binding Remark}" Width="*" MinWidth="100"
+                                                CellStyle="{StaticResource ClassicCell}"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+
+                <Border Grid.Row="1" Margin="0,0,2,3"
+                        Background="{StaticResource GridCyanBgBrush}"
+                        BorderBrush="{StaticResource GridFrameBrush}" BorderThickness="1">
+                    <DataGrid x:Name="SummaryGrid" Style="{StaticResource ClassicGrid}"
+                              Background="{StaticResource GridCyanBgBrush}"
+                              ItemsSource="{Binding SummaryRows}"
+                              IsReadOnly="True"
+                              SelectionMode="Extended"
+                              ClipboardCopyMode="IncludeHeader"
+                              HorizontalScrollBarVisibility="Auto"
+                              PreviewKeyDown="ResultGrid_PreviewKeyDown">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="" Binding="{Binding Unit}" Width="100"
+                                                CellStyle="{StaticResource ClassicCell}"/>
+                            <DataGridTextColumn Header="负荷等级" Binding="{Binding Level}" Width="100"
+                                                CellStyle="{StaticResource ClassicCell}"/>
+                            <DataGridTextColumn Header="安装容量(kW)" Binding="{Binding Pn}" Width="100"
+                                                CellStyle="{StaticResource ClassicCell}"/>
+                            <DataGridTextColumn Header="P(kW)" Binding="{Binding Pc}" Width="100"
+                                                CellStyle="{StaticResource ClassicCell}"/>
+                            <DataGridTextColumn Header="Q(kVar)" Binding="{Binding Qc}" Width="100"
+                                                CellStyle="{StaticResource ClassicCell}"/>
+                            <DataGridTextColumn Header="S(kVA)" Binding="{Binding S}" Width="100"
+                                                CellStyle="{StaticResource ClassicCell}"/>
+                            <DataGridTextColumn Header="备注" Binding="{Binding Remark}" Width="*" MinWidth="100"
+                                                CellStyle="{StaticResource ClassicCell}"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- ==================== 导出视图：dataGridView4 ==================== -->
+        <Grid x:Name="ExportPanel" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="51"/>
+            </Grid.RowDefinitions>
+
+            <Border Margin="2,3,1,0"
+                    Background="#C0FFFF"
+                    BorderBrush="{StaticResource GridFrameBrush}" BorderThickness="1">
+                <DataGrid x:Name="ExportGrid" Style="{StaticResource ClassicGrid}"
+                          Background="{StaticResource GridCyanBgBrush}"
+                          ItemsSource="{Binding ExportRows}"
+                          IsReadOnly="True"
+                          SelectionMode="Extended"
+                          ClipboardCopyMode="IncludeHeader"
+                          HorizontalScrollBarVisibility="Auto"
+                          PreviewKeyDown="ResultGrid_PreviewKeyDown">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header=" " Binding="{Binding Unit}" Width="100"
+                                            CellStyle="{StaticResource ClassicCell}"/>
+                        <DataGridTextColumn Header="负荷等级(kW)" Binding="{Binding Level}" Width="100"
+                                            CellStyle="{StaticResource ClassicCell}"/>
+                        <DataGridTextColumn Header="安装容量(kW)" Binding="{Binding Pn}" Width="100"
+                                            CellStyle="{StaticResource ClassicCell}"/>
+                        <DataGridTextColumn Header="P(kW)" Binding="{Binding Pc}" Width="100"
+                                            CellStyle="{StaticResource ClassicCell}"/>
+                        <DataGridTextColumn Header="Q(kVar)" Binding="{Binding Qc}" Width="100"
+                                            CellStyle="{StaticResource ClassicCell}"/>
+                        <DataGridTextColumn Header="S(kVA)" Binding="{Binding S}" Width="100"
+                                            CellStyle="{StaticResource ClassicCell}"/>
+                        <DataGridTextColumn Header="备注" Binding="{Binding Remark}" Width="*" MinWidth="100"
+                                            CellStyle="{StaticResource ClassicCell}"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+
+            <!-- 返回计算界面 -->
+            <Button x:Name="BackButton" Grid.Row="1"
+                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                    Margin="0,6,1,0" Width="87" Height="40"
+                    Style="{StaticResource WinButton}"
+                    Content="返回计算界面"
+                    Click="Back_Click"/>
+
+            <!-- 蓝色提示 -->
+            <TextBlock Grid.Row="1"
+                       HorizontalAlignment="Left" VerticalAlignment="Top"
+                       Margin="212,13,0,0"
+                       Foreground="Blue" FontFamily="宋体" FontSize="12"
+                       LineHeight="13" LineStackingStrategy="BlockLineHeight"
+                       xml:space="preserve">ctrl+A、ctrl+C可复制到剪贴板，在CAD或excel中粘贴！
+建议打开生成的excel，用天正读入excel功能生成表格！</TextBlock>
+        </Grid>
+    </Grid>
+</Window>
